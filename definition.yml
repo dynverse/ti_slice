@@ -1,5 +1,6 @@
 id: slice
 docker_repository: dynverse/ti_slice
+singularity_collection: 1580
 container_url: https://github.com/dynverse/ti_slice
 name: SLICE
 type: algorithm
