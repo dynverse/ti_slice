@@ -1,42 +1,66 @@
-id: slice
-docker_repository: dynverse/ti_slice
-singularity_collection: 1580
-container_url: https://github.com/dynverse/ti_slice
-name: SLICE
-source: tool
-platform: R
-doi: 10.1093/nar/gkw1278
-google_scholar_cluster_id: '9264372425710097325'
-trajectory_types:
-- linear
-- bifurcation
-- convergence
-- multifurcation
-- binary_tree
-- tree
-topology_inference: free
-license: GPL-3
-publication_date: '2016-12-19'
-code_url: https://research.cchmc.org/pbge/slice.html
+method:
+  id: slice
+  name: SLICE
+  tool_id: slice
+  source: tool
+  platform: R
+  url: https://research.cchmc.org/pbge/slice.html
+  license: GPL-3
+  authors:
+  - given: Yan
+    family: Xu
+    email: yan.xu@cchmc.org
+    github: xu-lab
+  - given: Minzhe
+    family: Guo
+    email: minzhe.guo@cchmc.org
+    github: minzheguo
+
+manuscript:
+  doi: 10.1093/nar/gkw1278
+  google_scholar_cluster_id: '9264372425710097325'
+  publication_date: '2016-12-19'
+
+container:
+  url: https://github.com/dynverse/ti_slice
+  docker: dynverse/ti_slice
+
+wrapper:
+  type: trajectory
+  topology_inference: free
+  trajectory_types:
+  - linear
+  - bifurcation
+  - convergence
+  - multifurcation
+  - binary_tree
+  - tree
+  example: /code/example.R
+  input_required:
+  - expression
+  input_optional:
+  - groups_id
+  - features_id
+
 parameters:
-  lm.method:
-    type: discrete
+  - id: lm.method
+    type: character
     default: clustering
     values:
     - clustering
     - graph
     description: Select "clustering" based or "graph" based method to infer lineage
       model
-  model.type:
-    type: discrete
+  - id: model.type
+    type: character
     default: tree
     values:
     - tree
     - graph
     description: 'The type of models that will be infered: "tree" - directed minimum
       spanning tree based, "graph" - directed graph based'
-  ss.method:
-    type: discrete
+  - id: ss.method
+    type: character
     default: all
     values:
     - all
@@ -50,14 +74,16 @@ parameters:
       steiner tree algorithm is used to approximate an optimal subnetwork, the cells
       in the subnetwork constitute the core cell set. Stable states are defined as
       the centroids of the core cell sets."
-  ss.threshold:
+  - id: ss.threshold
     type: numeric
+    distribution:
+      type: uniform
+      upper: 1.0
+      lower: 0.0e+00
     default: 0.25
-    upper: 1.0
-    lower: 0.0e+00
     description: 'The threshold used when ss.method is "top" or "pcst". Default: 0.25.'
-  community.method:
-    type: discrete
+  - id: community.method
+    type: character
     default: louvain
     values:
     - fast_greedy
@@ -74,35 +100,41 @@ parameters:
       \"walktrap\". \nIf this parameter is set to \"auto\", the algorithm will perform
       all the community detection methods and select the one that generates the communities
       with best modularity. \nOnly take effect when lm.method is \"graph\""
-  cluster.method:
-    type: discrete
+  - id: cluster.method
+    type: character
     default: kmeans
     values:
     - kmeans
     - pam
     description: Use "kmeans" or "pam" to divide cells into clusters. Only take effect
       when lm.method is "clustering"
-  k:
+  - id: k
     type: integer
     default: 0
-    lower: 0
-    upper: 20
+    distribution:
+      type: uniform
+      lower: 0
+      upper: 20
     description: The number of cell clusters. If NULL, Gap statistic will be used
       to determine an optimal k.
-  k.max:
+  - id: k.max
     type: integer
     default: 10
-    upper: 20
-    lower: 3
+    distribution:
+      type: uniform
+      upper: 20
+      lower: 3
     description: The "k.max" parameter of cluster::clusGap(); used when k is NULL.
-  B:
+  - id: B
     type: integer
     default: 100
-    upper: 500
-    lower: 3
+    distribution:
+      type: uniform
+      upper: 500
+      lower: 3
     description: The "B" parameter of cluster::clusGap(); used when k is NULL
-  k.opt.method:
-    type: discrete
+  - id: k.opt.method
+    type: character
     default: firstmax
     values:
     - firstmax
@@ -111,25 +143,3 @@ parameters:
     - firstSEmax
     - globalSEmax
     description: The "method" parameter of cluster::maxSE(); used when k is NULL
-input:
-  format: rds
-  optional:
-  - groups_id
-  - features_id
-  required: expression
-output:
-  format: rds
-  outputs:
-  - dimred
-  - trajectory
-  - timings
-wrapper_type: trajectory
-authors:
-- given: Yan
-  family: Xu
-  email: yan.xu@cchmc.org
-  github: xu-lab
-- given: Minzhe
-  family: Guo
-  email: minzhe.guo@cchmc.org
-  github: minzheguo

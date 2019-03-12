@@ -1,3 +1,7 @@
+#!/usr/local/bin/Rscript
+
+task <- dyncli::main()
+
 library(jsonlite)
 library(readr)
 library(dplyr)
@@ -9,18 +13,10 @@ library(igraph)
 #   ____________________________________________________________________________
 #   Load data                                                               ####
 
-data <- read_rds("/ti/input/data.rds")
-params <- jsonlite::read_json("/ti/input/params.json")
-
-#' @examples
-#' data <- dyntoy::generate_dataset(id = "test", num_cells = 300, num_features = 300, model = "linear") %>% c(., .$prior_information)
-#' params <- yaml::read_yaml("containers/slice/definition.yml")$parameters %>%
-#'   {.[names(.) != "forbidden"]} %>%
-#'   map(~ .$default)
-
-expression <- data$expression
-groups_id <- data$groups_id
-features_id <- data$features_id
+expression <- as.matrix(task$expression)
+params <- task$params
+groups_id <- task$priors$groups_id
+features_id <- task$priors$features_id
 
 
 # if k is 0, set to NULL
@@ -159,24 +155,22 @@ dimred_milestones <- cells.df %>%
   select(x, y) %>%
   as.matrix()
 
-
-
-# return output
-output <- lst(
-  cell_ids = rownames(dimred),
-  milestone_network,
-  progressions,
-  divergence_regions = NULL,
-  dimred,
-  dimred_milestones,
-  dimred_trajectory_segments = edge.df[,c("src.x", "src.y", "dst.x", "dst.y")] %>%
-    mutate_all(as.numeric) %>%
-    as.matrix %>%
-    magrittr::set_colnames(c("from_comp_1", "from_comp_2", "to_comp_1", "to_comp_2")),
-  timings = checkpoints
-)
-
 #   ____________________________________________________________________________
 #   Save output                                                             ####
 
-write_rds(output, "/ti/output/output.rds")
+output <- dynwrap::wrap_data(cell_ids = rownames(dimred)) %>%
+  dynwrap::add_trajectory(
+    milestone_network = milestone_network,
+    progressions = progressions
+  ) %>%
+  dynwrap::add_dimred(
+    dimred = dimred
+    # dimred_milestones = dimred_milestones,
+    # dimred_trajectory_segments = edge.df[,c("src.x", "src.y", "dst.x", "dst.y")] %>%
+    # mutate_all(as.numeric) %>%
+      # as.matrix %>%
+      # magrittr::set_colnames(c("from_comp_1", "from_comp_2", "to_comp_1", "to_comp_2"))
+  ) %>%
+  dynwrap::add_timings(checkpoints)
+
+output %>% dyncli::write_output(task$output)
