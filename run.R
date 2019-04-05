@@ -1,31 +1,25 @@
-library(jsonlite)
-library(readr)
-library(dplyr)
-library(purrr)
+#!/usr/local/bin/Rscript
 
-library(SLICE)
-library(igraph)
+task <- dyncli::main()
+
+library(dplyr, warn.conflicts = FALSE)
+library(purrr, warn.conflicts = FALSE)
+
+library(SLICE, warn.conflicts = FALSE)
+library(igraph, warn.conflicts = FALSE)
 
 #   ____________________________________________________________________________
 #   Load data                                                               ####
 
-data <- read_rds("/ti/input/data.rds")
-params <- jsonlite::read_json("/ti/input/params.json")
-
-#' @examples
-#' data <- dyntoy::generate_dataset(id = "test", num_cells = 300, num_features = 300, model = "linear") %>% c(., .$prior_information)
-#' params <- yaml::read_yaml("containers/slice/definition.yml")$parameters %>%
-#'   {.[names(.) != "forbidden"]} %>%
-#'   map(~ .$default)
-
-expression <- data$expression
-groups_id <- data$groups_id
-features_id <- data$features_id
+expression <- as.matrix(task$expression)
+parameters <- task$parameters
+groups_id <- task$priors$groups_id
+features_id <- task$priors$features_id
 
 
 # if k is 0, set to NULL
-if (params$k == 0) {
-  params$k <- NULL
+if (parameters$k == 0) {
+  parameters$k <- NULL
 }
 
 # if groups_id is not given, fill it with 1's
@@ -74,15 +68,15 @@ sc <- SLICE::getRDS(
 # infer entropy-directed cell lineage model
 sc <- SLICE::getLineageModel(
   sc,
-  model.type = params$model.type,
-  ss.method = params$ss.method,
-  ss.threshold = params$ss.threshold,
-  community.method = params$community.method,
-  cluster.method = params$cluster.method,
-  k = params$k,
-  k.max = params$k.max,
-  B = params$B,
-  k.opt.method = params$k.opt.method,
+  model.type = parameters$model.type,
+  ss.method = parameters$ss.method,
+  ss.threshold = parameters$ss.threshold,
+  community.method = parameters$community.method,
+  cluster.method = parameters$cluster.method,
+  k = parameters$k,
+  k.max = parameters$k.max,
+  B = parameters$B,
+  k.opt.method = parameters$k.opt.method,
   do.plot = FALSE
 )
 
@@ -159,24 +153,22 @@ dimred_milestones <- cells.df %>%
   select(x, y) %>%
   as.matrix()
 
-
-
-# return output
-output <- lst(
-  cell_ids = rownames(dimred),
-  milestone_network,
-  progressions,
-  divergence_regions = NULL,
-  dimred,
-  dimred_milestones,
-  dimred_trajectory_segments = edge.df[,c("src.x", "src.y", "dst.x", "dst.y")] %>%
-    mutate_all(as.numeric) %>%
-    as.matrix %>%
-    magrittr::set_colnames(c("from_comp_1", "from_comp_2", "to_comp_1", "to_comp_2")),
-  timings = checkpoints
-)
-
 #   ____________________________________________________________________________
 #   Save output                                                             ####
 
-write_rds(output, "/ti/output/output.rds")
+output <- dynwrap::wrap_data(cell_ids = rownames(dimred)) %>%
+  dynwrap::add_trajectory(
+    milestone_network = milestone_network,
+    progressions = progressions
+  ) %>%
+  dynwrap::add_dimred(
+    dimred = dimred
+    # dimred_milestones = dimred_milestones,
+    # dimred_trajectory_segments = edge.df[,c("src.x", "src.y", "dst.x", "dst.y")] %>%
+    # mutate_all(as.numeric) %>%
+      # as.matrix %>%
+      # magrittr::set_colnames(c("from_comp_1", "from_comp_2", "to_comp_1", "to_comp_2"))
+  ) %>%
+  dynwrap::add_timings(checkpoints)
+
+output %>% dyncli::write_output(task$output)
